@@ -24,17 +24,16 @@ def parse_line(line):
     return None
 
 def send_request(data):
-    response = requests.post(API_ENDPOINT, json=data)
-    if response.status_code == 200:
-        return response.text.strip()
-    else:
-        print(f"Request failed ({response.status_code}) for data: {data}")
+    try:
+        response = requests.post(API_ENDPOINT, json=data)
+        if response.status_code == 200:
+            return response.json()  # ✅ Expecting JSON
+        else:
+            print(f"❌ Request failed ({response.status_code}): {response.text}")
+            return None
+    except Exception as e:
+        print(f"❌ Request error: {e}")
         return None
-
-def parse_csv_response(csv_text):
-    lines = csv_text.splitlines()
-    reader = csv.DictReader(lines)
-    return list(reader)
 
 def save_to_csv(rows):
     headers = [
@@ -43,7 +42,8 @@ def save_to_csv(rows):
         "Path",
         "Channel",
         "Number of Intermediate Nodes",
-        "Throughput"
+        "Throughput",
+        "Timestamp"
     ]
     file_exists = os.path.isfile(CSV_FILENAME)
     with open(CSV_FILENAME, "a", newline="") as csvfile:
@@ -57,28 +57,28 @@ def process_entry(parsed):
     rows = []
     for channel in parsed["channels"]:
         request_data = {
-            "from": parsed["from"],
-            "to": parsed["to"],
+            "source": parsed["from"],
+            "destination": parsed["to"],
             "path": parsed["path"],
-            "channel": channel
+            "wireless_channel": channel
         }
 
-        print(f"Sending: {request_data}")
-        csv_response = send_request(request_data)
+        print(f"🔄 Sending: {request_data}")
+        json_response = send_request(request_data)
 
-        if not csv_response:
+        if not json_response:
             continue
 
-        csv_rows = parse_csv_response(csv_response)
-        for row in csv_rows:
-            rows.append({
-                "Source": row["source"],
-                "Dest": row["destination"],
-                "Path": ",".join(parsed["path"]),
-                "Channel": row["wireless_channel"],
-                "Number of Intermediate Nodes": len(parsed["path"]),
-                "Throughput": row["throughput"]
-            })
+        rows.append({
+            "Source": json_response["source"],
+            "Dest": json_response["destination"],
+            "Path": ",".join(parsed["path"]),
+            "Channel": json_response["wireless_channel"],
+            "Number of Intermediate Nodes": len(parsed["path"]),
+            "Throughput": json_response["rate_mbps"],
+            "Timestamp": json_response["timestamp"]
+        })
+
     return rows
 
 def run_from_txt():
@@ -87,13 +87,13 @@ def run_from_txt():
         for index, line in enumerate(file):
             parsed = parse_line(line)
             if not parsed:
-                print(f"Failed to parse line {index}: {line.strip()}")
+                print(f"❌ Failed to parse line {index}: {line.strip()}")
                 continue
             all_rows.extend(process_entry(parsed))
 
     if all_rows:
         save_to_csv(all_rows)
-        print(f"Saved {len(all_rows)} results to {CSV_FILENAME}")
+        print(f"✅ Saved {len(all_rows)} results to {CSV_FILENAME}")
 
 def run_from_cli():
     print("\nExample format:")
