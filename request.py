@@ -3,7 +3,10 @@ import requests
 import csv
 import os
 
-API_ENDPOINT = "http://your.api.endpoint/measurements"
+# --- CHANGE THIS LINE ---
+API_ENDPOINT = "http://localhost:8000/network/data-transfer-rate-2"
+# ------------------------
+
 CSV_FILENAME = "responses.csv"
 
 def parse_line(line):
