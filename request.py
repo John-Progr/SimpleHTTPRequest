@@ -4,7 +4,7 @@ import csv
 import os
 
 # --- CHANGE THIS LINE ---
-API_ENDPOINT = "http://localhost:8000/network/data-transfer-rate-2"
+API_ENDPOINT = "http://localhost:8000/network/data-transfer-rate"
 # ------------------------
 
 CSV_FILENAME = "responses.csv"
